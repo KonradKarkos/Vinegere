@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,292 +22,208 @@ namespace Vinegere
     /// </summary>
     public partial class MainWindow : Window
     {
-        int[,] tablica;
-        bool pierwszy, drugi, trzeci, czwarty;
+        private char[][] VinegereTable;
+        private bool TextToEncryptTextBoxIndicator, SecretEncryptionKeyTextBoxIndicator, TextToDecryptTextBoxIndicator, SecretDecryptKeyTextBoxIndicator;
         public MainWindow()
         {
             InitializeComponent();
-            this.tablica = new int[26, 26];
-            pierwszy = false;
-            drugi = false;
-            trzeci = false;
-            czwarty = false;
-            int z = 0;
+            this.VinegereTable = new char[26][];
+            TextToEncryptTextBoxIndicator = false;
+            SecretEncryptionKeyTextBoxIndicator = false;
+            TextToDecryptTextBoxIndicator = false;
+            SecretDecryptKeyTextBoxIndicator = false;
+            char z = 'A';
             for(int i=0;i<26;i++)
             {
-                z = i;
+                VinegereTable[i] = new char[26];
+                z = (char)('A' + i);
                 for(int j=0;j<26;j++)
                 {
-                    tablica[i, j] = z;
+                    VinegereTable[i][j] = z;
                     z++;
-                    if (z == 26) z = 0;
+                    if (z == '[') z = 'A';
                 }
             }
         }
 
-        private void button_Click(object sender, RoutedEventArgs e)
+        private void encryptButton_Click(object sender, RoutedEventArgs e)
         {
-            szyfruj(textBox.Text, textBox1.Text);
+            Encode(textToEncryptTextBox.Text, secretEncryptionKeyTextBox.Text);
         }
 
-        private void textBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void textToEncodeTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (textBox.Text.Length > 0 && sprawdz(textBox)) pierwszy = true;
-            else pierwszy = false;
-            if (drugi && pierwszy) button.IsEnabled = true;
-            else button.IsEnabled = false;
+            EnableButtonIfBothTextBoxesContainLetters((TextBox)sender, ref TextToEncryptTextBoxIndicator, ref SecretEncryptionKeyTextBoxIndicator, encryptButton);
+        }
+        private void secretEncryptionKeyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            EnableButtonIfBothTextBoxesContainLetters((TextBox)sender, ref SecretEncryptionKeyTextBoxIndicator, ref TextToEncryptTextBoxIndicator, encryptButton);
+        }
+        private void loadPlainTextButton_Click(object sender, RoutedEventArgs e)
+        {
+            LoadFromFile(textToEncryptTextBox, "ToEncrypt.txt");
         }
 
-        private void textBox2_TextChanged(object sender, TextChangedEventArgs e)
+        private void savePlainTextButton_Click(object sender, RoutedEventArgs e)
         {
-            if (textBox2.Text.Length > 0 && sprawdz(textBox2)) trzeci = true;
-            else trzeci = false;
-            if (trzeci && czwarty) button1.IsEnabled = true;
-            else button1.IsEnabled = false;
+            SaveToFile(textToEncryptTextBox, "ToEncrypt.txt");
         }
 
-        private void textBox3_TextChanged(object sender, TextChangedEventArgs e)
+        private void loadEncryptionKeyButton_Click(object sender, RoutedEventArgs e)
         {
-            if (textBox3.Text.Length > 0 && sprawdz(textBox3)) czwarty = true;
-            else czwarty = false;
-            if (trzeci && czwarty) button1.IsEnabled = true;
-            else button1.IsEnabled = false;
+            LoadFromFile(secretEncryptionKeyTextBox, "SecretKey.txt");
+        }
+        private void saveEncryptionKeyButton_Click(object sender, RoutedEventArgs e)
+        {
+            SaveToFile(secretEncryptionKeyTextBox, "SecretKey.txt");
         }
 
-        private void textBox4_TextChanged(object sender, TextChangedEventArgs e)
+        private void saveEncryptedTextButton_Click(object sender, RoutedEventArgs e)
         {
-
+            SaveToFile(encryptedTextTextBox, "ToDecrypt.txt");
         }
 
-        private void textBox4_TextChanged_1(object sender, TextChangedEventArgs e)
+        private void Encode(String plainText, String secretKey)
         {
-
-        }
-
-        private void button1_Click(object sender, RoutedEventArgs e)
-        {
-            odszyfruj(textBox2.Text, textBox3.Text);
-        }
-
-        private void button2_Click(object sender, RoutedEventArgs e)
-        {
-            wczytaj(textBox, "DoZaszyfrowania.txt");
-        }
-
-        private void button3_Click(object sender, RoutedEventArgs e)
-        {
-            zapisz(textBox, "DoZaszyfrowania.txt");
-        }
-
-        private void button4_Click(object sender, RoutedEventArgs e)
-        {
-            wczytaj(textBox1, "Haslo.txt");
-        }
-
-        private void textBox1_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (textBox1.Text.Length > 0 && sprawdz(textBox1)) drugi = true;
-            else drugi = false;
-            if(pierwszy && drugi) button.IsEnabled = true;
-            else button.IsEnabled = false;
-        }
-        private void szyfruj(String teks, String hasl)
-        {
-            String tekst = teks;
-            String haslo = hasl;
-            tekst = tekst.ToUpper();
-            haslo = haslo.ToUpper();
-            StringBuilder s = new StringBuilder();
-            foreach (char c in tekst)
+            plainText = plainText.ToUpper();
+            secretKey = secretKey.ToUpper();
+            StringBuilder stringBuilder = new StringBuilder();
+            plainText = Regex.Replace(plainText, @"[^A-Z \n]+", "");
+            int plainTextLength = plainText.Length;
+            secretKey = Regex.Replace(secretKey, @"[^A-Z]+", "");
+            while (stringBuilder.Length < plainTextLength)
             {
-                if ((c >= 'A' && c <= 'Z') || c == ' ' || c== (char)(10)) s.Append(c);
+                stringBuilder.Append(secretKey);
             }
-            tekst = s.ToString();
-            int dlugosctekstu = tekst.Length;
-            s.Clear();
-            foreach (char c in haslo)
+            for (int i = 0; i < plainTextLength; i++)
             {
-                if (c >= 'A' && c <= 'Z') s.Append(c);
+                if (plainText[i] == ' ') stringBuilder.Insert(i, ' ');
+                if(plainText[i]== '\n') stringBuilder.Insert(i, '\n');
             }
-            haslo = s.ToString();
-            s.Clear();
-            while (s.Length < dlugosctekstu)
+            stringBuilder.Remove(plainTextLength, stringBuilder.Length - plainTextLength);
+            secretKey = stringBuilder.ToString();
+            stringBuilder.Clear();
+            for (int i = 0; i < plainTextLength; i++)
             {
-                s.Append(haslo);
-            }
-            for (int i = 0; i < dlugosctekstu; i++)
-            {
-                if (tekst[i] == ' ') s.Insert(i, ' ');
-                if(tekst[i]== (char)(10)) s.Insert(i, (char)(10));
-            }
-            s.Remove(dlugosctekstu, s.Length - dlugosctekstu);
-            haslo = s.ToString();
-            s.Clear();
-            char a;
-            int indeks1, indeks2;
-            for (int i = 0; i < dlugosctekstu; i++)
-            {
-                if (tekst[i] == ' ') s.Append(' ');
-                if (tekst[i] == (char)(10)) s.Append((char)(10));
-                else if(tekst[i] != ' ' && tekst[i] != (char)(10))
+                if (plainText[i] == ' ') stringBuilder.Append(' ');
+                if (plainText[i] == '\n') stringBuilder.Append('\n');
+                else if(plainText[i] != ' ' && plainText[i] != '\n')
                 {
-                    indeks1 = (int)tekst[i];
-                    indeks2 = (int)haslo[i];
-                    a = (char)(tablica[indeks1 - 65, indeks2 - 65] + 65);
-                    s.Append(a);
+                    stringBuilder.Append(VinegereTable[plainText[i] - 65][secretKey[i] - 65]);
                 }
             }
-            textBox4.Text = s.ToString();
+            encryptedTextTextBox.Text = stringBuilder.ToString();
+        }
+        private void decryptButton_Click(object sender, RoutedEventArgs e)
+        {
+            Decode(textToDecryptTextBox.Text, secretDecryptionKeyTextBox.Text);
+        }
+        private void textToDecryptTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            EnableButtonIfBothTextBoxesContainLetters((TextBox)sender, ref TextToDecryptTextBoxIndicator, ref SecretDecryptKeyTextBoxIndicator, decryptButton);
         }
 
-        private void button5_Click(object sender, RoutedEventArgs e)
+        private void secretDecryptionKeyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            zapisz(textBox1, "Haslo.txt");
+            EnableButtonIfBothTextBoxesContainLetters((TextBox)sender, ref SecretDecryptKeyTextBoxIndicator, ref TextToDecryptTextBoxIndicator, decryptButton);
         }
 
-        private void button6_Click(object sender, RoutedEventArgs e)
+
+        private void loadEncryptedTextButton_Click(object sender, RoutedEventArgs e)
         {
-            zapisz(textBox4, "DoOdszyfrowania.txt");
+            LoadFromFile(textToDecryptTextBox, "ToDecrypt.txt");
         }
 
-        private void button8_Click_1(object sender, RoutedEventArgs e)
+        private void loadDecryptionKeyButton_Click(object sender, RoutedEventArgs e)
         {
-            zapisz(textBox2, "DoOdszyfrowania.txt");
+            LoadFromFile(secretDecryptionKeyTextBox, "SecretKey.txt");
         }
 
-        private void button7_Click_1(object sender, RoutedEventArgs e)
+        private void saveDecryptionKeyButton_Click(object sender, RoutedEventArgs e)
         {
-            wczytaj(textBox2, "DoOdszyfrowania.txt");
+            SaveToFile(secretDecryptionKeyTextBox, "SecretKey.txt");
         }
 
-        private void button9_Click_1(object sender, RoutedEventArgs e)
+        private void saveDecryptedTextButton_Click(object sender, RoutedEventArgs e)
         {
-            wczytaj(textBox3, "Haslo.txt");
+            SaveToFile(decryptedTextTextBox, "Decrypted.txt");
         }
 
-        private void button10_Click_1(object sender, RoutedEventArgs e)
+        private void helpButton_Click(object sender, RoutedEventArgs e)
         {
-            zapisz(textBox3, "Haslo.txt");
+            MessageBox.Show("Program has ability to encrypt and decrypt text using Vinegere cipher. All letters outside of ASCII scope will be removed and reslut will be displayed in all CAPS.\n"
+    + "The Vigener cipher is based on matching each plaintext letter with the corresponding letter in a two-dimensional array filled with alphabet with Caesar shift corresponding to the row/column number. The matching letter from the 'intersection' of the plaintext letter and the key letter is the encrypted one.\n"
+    + "The program allows you to load and save text from files in the program folder. NOTE - the encrypted text from the Encryption tab is saved to the same file as the plain text from the Decryption tab.\n"
+    + "Passwords from both tabs are also saved to the same files. This solution was chosen to facilitate the testing of the program operation");
         }
 
-        private void button11_Click_1(object sender, RoutedEventArgs e)
+        private void Decode(String encodedString, String secretKey)
         {
-            zapisz(textBox3_Copy, "Odszyfrowany.txt");
-        }
-
-        private void button12_Click(object sender, RoutedEventArgs e)
-        {
-            okienko();
-        }
-
-        private void odszyfruj(String teks, String hasl)
-        {
-            String tekst = teks;
-            String haslo = hasl;
-            tekst = tekst.ToUpper();
-            haslo = haslo.ToUpper();
-            StringBuilder s = new StringBuilder();
-            foreach (char c in tekst)
+            encodedString = encodedString.ToUpper();
+            secretKey = secretKey.ToUpper();
+            StringBuilder stringBuilder = new StringBuilder();
+            encodedString = Regex.Replace(encodedString, @"[^A-Z \n]+", "");
+            int encodedStringLength = encodedString.Length;
+            secretKey = Regex.Replace(secretKey, @"[^A-Z]+", "");
+            while (stringBuilder.Length < encodedStringLength)
             {
-                if ((c >= 'A' && c <= 'Z') || c == ' ' || c==(char)(10)) s.Append(c);
+                stringBuilder.Append(secretKey);
             }
-            tekst = s.ToString();
-            int dlugosctekstu = tekst.Length;
-            s.Clear();
-            foreach (char c in haslo)
+            for (int i = 0; i < encodedStringLength; i++)
             {
-                if (c >= 'A' && c <= 'Z') s.Append(c);
+                if (encodedString[i] == ' ') stringBuilder.Insert(i, ' ');
+                if (encodedString[i] == '\n') stringBuilder.Insert(i, '\n');
             }
-            haslo = s.ToString();
-            s.Clear();
-            while (s.Length < dlugosctekstu)
+            secretKey = stringBuilder.ToString();
+            stringBuilder.Clear();
+            int secretKeyIndex = 0, encodedStringIndex = 0;
+            for (int j = 0; j < encodedStringLength; j++)
             {
-                s.Append(haslo);
-            }
-            for (int i = 0; i < dlugosctekstu; i++)
-            {
-                if (tekst[i] == ' ') s.Insert(i, ' ');
-                if (tekst[i] == (char)(10)) s.Insert(i, (char)(10));
-            }
-            s.Remove(dlugosctekstu, s.Length - dlugosctekstu);
-            haslo = s.ToString();
-            s.Clear();
-            int indeks1 = 0, indeks2 = 0;
-            char a;
-            //pętla tworząca odszyfrowany tekst
-            for (int j = 0; j < haslo.Length; j++)
-            {
-                if (haslo[j] == ' ') s.Append(' ');
-                if (haslo[j] == (char)(10)) s.Append((char)(10));
-                //"szyfrowanie wsteczne"
-                else if (haslo[j] != ' ' && haslo[j] != (char)(10))
+                if (secretKey[j] == ' ') stringBuilder.Append(' ');
+                else if (secretKey[j] == '\n') stringBuilder.Append('\n');
+                else
                 {
+                    secretKeyIndex = Array.IndexOf(VinegereTable[0], secretKey[j]);
                     for (int i = 0; i < 26; i++)
                     {
-                        //znajdowanie odpowiedniej litery w tablicy
-                        if (tablica[0, i] == ((int)haslo[j] - 65))
-                        {
-                            indeks1 = i;
-                            break;
-                        }
+                        if (VinegereTable[i][secretKeyIndex] == encodedString[j]) encodedStringIndex = i;
                     }
-                    //znajdowanie indeksu litery z tekstu zaszyfrowanego
-                    for (int i = 0; i < 26; i++)
-                    {
-                        if (tablica[i, indeks1] == ((int)tekst[j] - 65)) indeks2 = i;
-                    }
-                    a = (char)(tablica[indeks2, 0] + 65);
-                    s.Append(a);
+                    stringBuilder.Append(VinegereTable[encodedStringIndex][0]);
                 }
             }
-            textBox3_Copy.Text = s.ToString();
+            decryptedTextTextBox.Text = stringBuilder.ToString();
         }
-        private void wczytaj(TextBox tekst, String plik)
+        private void LoadFromFile(TextBox textBox, String filePath)
         {
-            StreamReader sr = new StreamReader(plik);
-            StringBuilder s = new StringBuilder();
-            String linia = sr.ReadLine();
-            char a = (char)(10);
-            while (linia != null)
+            StreamReader streamReader = new StreamReader(filePath);
+            StringBuilder stringBuilder = new StringBuilder();
+            String line = streamReader.ReadLine();
+            while (line != null)
             {
-                s.Append(linia);
-                s.Append(a);
-                linia = sr.ReadLine();
+                stringBuilder.Append(line);
+                stringBuilder.Append('\n');
+                line = streamReader.ReadLine();
             }
-            sr.Close();
-            tekst.Text = s.ToString();
+            streamReader.Close();
+            textBox.Text = stringBuilder.ToString();
         }
-        private void zapisz(TextBox tekst, String plik)
+        private void SaveToFile(TextBox textBox, String filePath)
         {
-            StreamWriter sr = new StreamWriter(plik);
-            StringBuilder s = new StringBuilder();
-            if (tekst.LineCount > 0)
+            StreamWriter streamWriter = new StreamWriter(filePath);
+            if (textBox.LineCount > 0)
             {
-                for (int i = 0; i < tekst.LineCount; i++)
+                for (int i = 0; i < textBox.LineCount; i++)
                 {
-                    sr.Write(tekst.GetLineText(i));
+                    streamWriter.Write(textBox.GetLineText(i));
                 }
             }
-            sr.Close();
+            streamWriter.Close();
         }
-        private void okienko()
+        private void EnableButtonIfBothTextBoxesContainLetters(TextBox textBoxToCheck, ref bool textBoxToCheckIndicator, ref bool secondTextBoxIndicator, Button button)
         {
-            MessageBox.Show("Program polega na szyfrowaniu podanego tekstu za pomocą szyfru Vigener'a. Wszystkie specjalne znaki zostaną usunięte, a tekst wyjściowy będzie podany w capitalikach."+(char)(10)
-                +"Szyfr Vigener'a polega na dopasowaniu po kolei każdej litery tekstu jawnego z odpowiadjącą jej literą hasła w tablicy dwuwymiarowej wypełnionej alfabetem z przesunięciem Cezara odpowiadającym numerowi wiersza/kolumny. Dopasowana w ten sposób litera z 'przecięcia' litery tekstu jawnego i litery hasła jest już zaszyfrowana."+(char)(10)
-                +"Program pozwala na wczytywanie i zapisywanie tekstu z plików znajdujących się w folderze Debug. UWAGA - tekst zaszyfrowany z zakładki Szyfrowanie jest zapisywany do tego samego pliku co tekst jawny z zakładki Deszyfrowanie."+(char)(10)
-                +"Hasła z obu zakładek także są zapisywanie do tych samych plików. Takie rozwiązanie zostało wybrane aby ułatwić testowanie działania programu"+(char)(10)+(char)(10)
-                +"Do przekształcania łańcuchów znaków została użyta klasa StringBuilder w celu zminimalizowanie odwołań do danego miejsca w pamięci, których byłoby dużo z uwagi na ilość pętli. Tablica z alfabetami odpowiadającymi kolejnym przesunięciom to tablica liczb oznaczająych kolejną literę alfabetu (mogła to być również tablica char'ów).",
-                "Opis");
-        }
-        private bool sprawdz(TextBox tekst)
-        {
-            bool prawda = false;
-            String s = tekst.Text;
-            for(int i=0;i<s.Length;i++)
-            {
-                if (s[i] != ' ' && s[i] != (char)(10)) prawda = true;
-            }
-            return prawda;
+            textBoxToCheckIndicator = Regex.Match(textBoxToCheck.Text, @"[A-Za-z]").Success;
+            if (textBoxToCheckIndicator && secondTextBoxIndicator) button.IsEnabled = true;
+            else button.IsEnabled = false;
         }
     }
 }
